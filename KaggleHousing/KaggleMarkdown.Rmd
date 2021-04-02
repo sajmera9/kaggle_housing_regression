@@ -8,6 +8,11 @@ output: html_document
 
 
 ```{r}
+train = read.csv("../house-prices-advanced-regression-techniques/train.csv", header = TRUE)
 
+colnames(train)
+
+
+#
 ```
 
