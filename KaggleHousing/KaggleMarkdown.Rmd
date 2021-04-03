@@ -9,10 +9,22 @@ output: html_document
 
 ```{r}
 train = read.csv("../house-prices-advanced-regression-techniques/train.csv", header = TRUE)
-
+library(tidyverse)
 colnames(train)
 
+#SalePrice
+#GrLivArea
+#Neighborhood
+new_train = train %>% filter(Neighborhood == "NAmes" | Neighborhood == "Edwards" | Neighborhood == "BrkSide") %>% select(SalePrice, GrLivArea, Neighborhood)
 
-#
+new_train = train %>% filter(Neighborhood == "NAmes" | Neighborhood == "Edwards" | Neighborhood == "BrkSide") %>% select(SalePrice, GrLivArea, Neighborhood) %>% droplevels()
+summary()
+
+fit0 = lm(SalePrice~GrLivArea + factor(Neighborhood), data = new_train)
+summary(fit0)
+plot(fit0)
+
+
+
 ```
 
