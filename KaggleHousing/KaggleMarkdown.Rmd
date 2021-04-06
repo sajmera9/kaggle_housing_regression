@@ -3,28 +3,93 @@ title: "KaggleMarkdown"
 author: "Satvik and Jobin"
 date: "4/2/2021"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 
 
 ```{r}
 train = read.csv("../house-prices-advanced-regression-techniques/train.csv", header = TRUE)
+test = read.csv("../house-prices-advanced-regression-techniques/test.csv", header = TRUE)
 library(tidyverse)
 colnames(train)
-
+x_train = train %>% filter(Neighborhood == "NAmes" | Neighborhood == "Edwards" | Neighborhood == "BrkSide")
 #SalePrice
 #GrLivArea
 #Neighborhood
-new_train = train %>% filter(Neighborhood == "NAmes" | Neighborhood == "Edwards" | Neighborhood == "BrkSide") %>% select(SalePrice, GrLivArea, Neighborhood)
 
 new_train = train %>% filter(Neighborhood == "NAmes" | Neighborhood == "Edwards" | Neighborhood == "BrkSide") %>% select(SalePrice, GrLivArea, Neighborhood) %>% droplevels()
-summary()
 
-fit0 = lm(SalePrice~GrLivArea + factor(Neighborhood), data = new_train)
+write.csv(new_train, "../filteredNeighborhood.csv", row.names = FALSE)
+
+fit0 = lm(log(SalePrice)~log(GrLivArea) * factor(Neighborhood), data = new_train)
 summary(fit0)
 plot(fit0)
 
+library(plotly)
+
+p = new_train %>% ggplot(aes(x = log(GrLivArea), y = log(SalePrice), color = Neighborhood)) + geom_point()
+ggplotly(p)
+
+#Outlier
+new_train = train %>% filter(Neighborhood == "NAmes" | Neighborhood == "Edwards" | Neighborhood == "BrkSide") %>% select(SalePrice, GrLivArea, Neighborhood)
+x_train[339,]
+
+```
+
+
+
+```{r}
+library(naniar)
+gg_miss_var(train)
+sapply(train, function(x) sum(is.na(x)))
+sapply(x, sum(train))
+```
+
+
+
+```{r}
+train
+test
+#Forward Selection
+library(olsrr)
+#Test 1
+house_fit = lm(SalePrice~GrLivArea+OverallCond+YearBuilt+HouseStyle+FullBath, data = train)
+house_fit_test = lm(SalePrice~., data = train)
+
+ols_step_forward_p(house_fit,penter = 0.05, details = TRUE)
+#Test 2
+#Backwards Elimination
+house_fit2 = lm(log(SalePrice)~log(GrLivArea)+OverallCond+YearBuilt+HouseStyle+FullBath * factor(LandContour), data = train)
+ols_step_backward_p(house_fit2,penter = 0.05, details = TRUE)
+
+
+#Stepwise Elimination
+library(reshape2)
+stepmodel = ols_step_both_p(house_fit2, pent = 0.05, prem = 0.05, details = TRUE)
+
+preds = predict(house_fit2, newdata = test)
+test$SalePrice = preds
+my_submission = test %>% select(Id, SalePrice)
+str(my_submission)
+preds = predict(house_fit2, newdata = test)
+test$SalePrice = preds
+my_submission = test %>% select(Id, SalePrice)
+#my_submission2 <- data_frame('Id' = test$Id, 'SalePrice' = preds)
+my_submission$SalePrice = exp(my_submission$SalePrice)
+write.csv(my_submission, "../sub_2.csv", row.names = FALSE)
+
+kag = predict(stepmodel$model, newdata = test)
+my_submission <- as.data.frame(kag)
+
+write.csv(kag, "../kag.csv")
+new = as.data.frame(house_fit2$model)
+head(kag)
 
 
 ```
+
+
+
 
