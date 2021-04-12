@@ -8,352 +8,67 @@ editor_options:
 ---
 
 
-
 ```{r}
-train %>% group_by(Condition2) %>% summarise(n = n())
-
-train$Utilities = NULL
-train$Condition2 = NULL
-train$HouseStyle = NULL
-train$RoofMatl = NULL
-train$Exterior1st = NULL
-train$Exterior2nd = NULL
-train$Heating = NULL
-train$Electrical = NULL
-train$GarageQual = NULL
-train$PoolQC = NULL
-train$MiscFeature = NULL
-
-test$Utilities = NULL
-test$Condition2 = NULL
-test$HouseStyle = NULL
-test$RoofMatl = NULL
-test$Exterior1st = NULL
-test$Exterior2nd = NULL
-test$Heating = NULL
-test$Electrical = NULL
-test$GarageQual = NULL
-test$PoolQC = NULL
-test$MiscFeature = NULL
-train
-
-write.csv(train,"new_train_1.csv", row.names = FALSE)
-write.csv(test,"new_test_1.csv", row.names = FALSE)
-test
-
-
-
-
-
-
-
-
-
-#Fit A - Submission3
-fitA = lm(log(SalePrice) ~ log(GrLivArea) + MSSubClass + LotArea + OverallQual + OverallCond + YearRemodAdd*factor(ExterQual) + FullBath*factor(ExterCond), data = train)
-predA = predict(fitA, newdata = test)
-predA
-summary(fitA)
-test$SalePrice = predA
-my_submissionA = test %>% select(Id, SalePrice)
-str(my_submissionA)
-my_submissionA$SalePrice = exp(my_submissionA$SalePrice)
-write.csv(my_submissionA, "../sub_3.csv", row.names = FALSE)
-
-#Fit B - Submission4
-fitB = lm(log(SalePrice) ~ log(GrLivArea)*factor(SaleCondition) + MSSubClass + log(LotArea) + OverallQual + OverallCond + YearRemodAdd + FullBath*factor(ExterCond), data = train)
-predB = predict(fitB, newdata = test)
-predB
-summary(fitB)
-test$SalePrice = predB
-my_submissionB = test %>% select(Id, SalePrice)
-str(my_submissionB)
-my_submissionB$SalePrice = exp(my_submissionB$SalePrice)
-write.csv(my_submissionB, "../sub_4.csv", row.names = FALSE)
-
-#Fit C - Submission5
-fitC = lm(log(SalePrice) ~ log(GrLivArea)+BedroomAbvGr+FullBath+HalfBath+TotRmsAbvGrd, data = train)
-predC = predict(fitC, newdata = test)
-predC
-summary(fitC)
-test$SalePrice = predC
-my_submissionC = test %>% select(Id, SalePrice)
-str(my_submissionC)
-my_submissionC$SalePrice = exp(my_submissionC$SalePrice)
-write.csv(my_submissionC, "../sub_5.csv", row.names = FALSE)
-
-
-
-
-
-
-
-
-
-preds = predict(fit, newdata = test)
-test
-
-test %>% group_by(Condition2) %>% summarise(n = n())
-
-ols_step_backward_p(fitA,penter = 0.10, details = TRUE)
-
-
-
-#Utilities
-
-```
-
-```{r}
-fit = lm(SalePrice = GrLivArea+YearBuilt*factor(Condition2), data = train)
-
-
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```{r}
-train %>%
-  group_by(Neighborhood) %>%
-  summarise(count = n(), Max_val = max(value), Min_val = min(value)) %>%
-  View
-
-train %>% count(Number,Bin)
-```
-
-
-
-
-
-
-
-
-
-```{r}
-############################################################################################
-```
-
-
-```{r}
+library(tidyverse)
+library(olsrr)
+library(naniar)
+library(reshape2)
+library(qpcR)
+library(DAAG)
 train = read.csv("../house-prices-advanced-regression-techniques/train.csv", header = TRUE)
 test = read.csv("../house-prices-advanced-regression-techniques/test.csv", header = TRUE)
-library(tidyverse)
-colnames(train)
-x_train = train %>% filter(Neighborhood == "NAmes" | Neighborhood == "Edwards" | Neighborhood == "BrkSide")
-#SalePrice
-#GrLivArea
-#Neighborhood
 
 new_train = train %>% filter(Neighborhood == "NAmes" | Neighborhood == "Edwards" | Neighborhood == "BrkSide") %>% select(SalePrice, GrLivArea, Neighborhood) %>% droplevels()
 
 write.csv(new_train, "../filteredNeighborhood.csv", row.names = FALSE)
 
-fit0 = lm(log(SalePrice)~log(GrLivArea) * factor(Neighborhood), data = new_train)
-summary(fit0)
-
-plot(fit0)
-confint(fit0)
-library(plotly)
-
-p = new_train %>% ggplot(aes(x = log(GrLivArea), y = log(SalePrice), color = Neighborhood)) + geom_point()
-ggplotly(p)
-
-#Outlier
-new_train = train %>% filter(Neighborhood == "NAmes" | Neighborhood == "Edwards" | Neighborhood == "BrkSide") %>% select(SalePrice, GrLivArea, Neighborhood)
-x_train[339,]
-
-str(train)
-str(test)
 ```
 
-(2.09)+()
 
 ```{r}
-library(naniar)
 gg_miss_var(train)
 sapply(train, function(x) sum(is.na(x)))
 sapply(x, sum(train))
 ```
 
 
-
 ```{r}
-train
-test
+
 #Forward Selection
-library(olsrr)
-#Test 1
-house_fit = lm(SalePrice~GrLivArea+OverallCond+YearBuilt+HouseStyle+FullBath, data = train)
-house_fit_test = lm(SalePrice~., data = train)
-preds = predict(house_fit_test, newdata = test)
+forward_fit = lm(SalePrice~GrLivArea+OverallCond+YearBuilt+HouseStyle+FullBath, data = train)
+preds0 = predict(forward_fit, newdata = test)
+ols_step_forward_p(forward_fit,penter = 0.05, details = TRUE)
 
-ols_step_forward_p(house_fit,penter = 0.05, details = TRUE)
-#Test 2
+
 #Backwards Elimination
-house_fit2 = lm(log(SalePrice)~log(GrLivArea)+OverallCond+YearBuilt+HouseStyle+FullBath, data = train)
-house_fit3 = lm(log(SalePrice)~log(GrLivArea)+OverallCond+YearBuilt+HouseStyle+FullBath * factor(Neighborhood), data = train)
-summary(house_fit3)
-ols_step_backward_p(house_fit2,penter = 0.05, details = TRUE)
-
-ols_step_backward_p(house_fit3,penter = 0.05, details = TRUE)
-
-preds = predict(house_fit3, newdata = test)
-test$SalePrice = preds
-my_submission = test %>% select(Id, SalePrice)
-my_submission$SalePrice = exp(my_submission$SalePrice)
-write.csv(my_submission, "../sub_3.csv", row.names = FALSE)
+backward_fit = lm(log(SalePrice)~log(GrLivArea)+OverallCond+YearBuilt+HouseStyle+FullBath * factor(Neighborhood), data = train)
+preds1 = predict(backward_fit, newdata = test)
+ols_step_backward_p(backward_fit,penter = 0.05, details = TRUE)
 
 
 #Stepwise Elimination
-library(reshape2)
-stepmodel = ols_step_both_p(house_fit2, pent = 0.05, prem = 0.05, details = TRUE)
-
-preds = predict(house_fit2, newdata = test)
+stepwise_fit = lm(log(SalePrice)~log(GrLivArea)+OverallCond+YearBuilt+HouseStyle+FullBath * factor(Neighborhood), data = train)
+stepmodel = ols_step_both_p(stepwise_fit, pent = 0.05, prem = 0.05, details = TRUE)
+preds = predict(stepwise_fit, newdata = test)
 test$SalePrice = preds
 my_submission = test %>% select(Id, SalePrice)
 str(my_submission)
 preds = predict(house_fit2, newdata = test)
 test$SalePrice = preds
 my_submission = test %>% select(Id, SalePrice)
-#my_submission2 <- data_frame('Id' = test$Id, 'SalePrice' = preds)
 my_submission$SalePrice = exp(my_submission$SalePrice)
-write.csv(my_submission, "../sub_2.csv", row.names = FALSE)
-
-kag = predict(stepmodel$model, newdata = test)
-my_submission <- as.data.frame(kag)
-
-write.csv(kag, "../kag.csv")
-new = as.data.frame(house_fit2$model)
-head(kag)
+write.csv(my_submission, "../Stepwise.csv", row.names = FALSE)
 
 
+#Custom Model
+house_fit.lm3 <- lm(log(SalePrice) ~ log(GrLivArea):Neighborhood + OverallQual:HouseStyle + OverallCond + YearBuilt:HouseStyle + FullBath, data = train)
+plot(house_fit.lm3)
+summary(house_fit.lm3)
+press(house_fit.lm3)
+preds = predict(house_fit.lm3, newdata = test)
+test$SalePrice = preds
+my_submission = test %>% select(Id, SalePrice)
+my_submission$SalePrice = exp(my_submission$SalePrice)
+write.csv(my_submission, "CustomModel.csv", row.names = FALSE)
 ```
-
-
-```{r}
-house_fit2 = lm(log(SalePrice)~log(GrLivArea)+OverallCond+YearBuilt+HouseStyle+FullBath, data = train)
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```{r}
-train
-train$lsaleprice = log(train$SalePrice)
-train$lgrlivarea = log(train$GrLivArea)
-TrainObs = sample(seq(1,dim(train)[1]),round(.80*dim(train)[1]),replace = FALSE)
-HOUSETrain = train[TrainObs,]
-HOUSETrain
-HOUSETest = train[-TrainObs,]
-HOUSETest
-Model1_fit = lm(SalePrice~GrLivArea+OverallCond+YearBuilt+FullBath * factor(LandContour), data = HOUSETrain)
-# Build the model
-# Make predictions and compute the R2, RMSE and MAE
-
-Model1_Preds = predict(Model1_fit, newdata = HOUSETrain)
-predictions <- Model1_Preds %>% predict(HOUSETest)
-MSPE = data.frame(Observed = HOUSETest$lsaleprice, Predicted = Model1_Preds)
-MSPE$Residual = MSPE$Observed - MSPE$Predicted
-MSPE$SquaredResidual = MSPE$Residual^2
-mean(MSPE$SquaredResidual)
-
-
-
-numMSPEs = 500
-MSPEHolderModel1 = numeric(numMSPEs)
-
-for (i in 1:numMSPEs)
-{
-  TrainObs = sample(seq(1,dim(train)[1]),round(.80*dim(train)[1]),replace = FALSE)
-  HOUSETrain = train[TrainObs,]
-  HOUSETrain
-  HOUSETest = train[-TrainObs,]
-  HOUSETest
-  Model1_fit = lm(lsaleprice~lgrlivarea+OverallCond+YearBuilt+HouseStyle+FullBath * formula = factor(LandContour), data = HOUSETrain)
-  Model1_Preds = predict(Model1_fit, newdata = HOUSETrain)
-  #MSPE Model 1
-  MSPE = mean((HOUSETest$SalePrice - Model1_Preds)^2)
-  MSPEHolderModel1[i] = MSPE
-}
-
-mean(MSPEHolderModel1)
-# mean(MSPEHolderModel2)
-```
-
-```{r}
-numMSPEs = 1000
-MSPEHolderModel1 = numeric(numMSPEs)
-
-for (i in 1:numMSPEs)
-{
-  TrainObs = sample(seq(1,dim(train)[1]),round(.80*dim(train)[1]),replace = FALSE)
-  HOUSETest = train[-TrainObs,]
-  Model1_fit = lm(SalePrice~GrLivArea, data = HOUSETrain)
-  Model1_Preds = predict(Model1_fit, newdata = HOUSETrain)
-
-  #MSPE Model 1
-  MSPE = mean((HOUSETest$SalePrice - Model1_Preds)^2)
-  MSPE
-  MSPEHolderModel1[i] = MSPE
-  
-}
-
-mean(MSPEHolderModel1)
-```
-
-
 
